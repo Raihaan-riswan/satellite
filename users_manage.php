@@ -48,7 +48,7 @@ $users = $stmt->fetchAll();
 <head>
   <meta charset="UTF-8">
   <title>OrbitTrack - User Management</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="asset/css/style.css">
   <style>
     .user-table {
       width: 100%;
