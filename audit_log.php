@@ -28,7 +28,7 @@ $logs = $stmt->fetchAll();
 <head>
   <meta charset="UTF-8">
   <title>OrbitTrack - Audit Logs</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="asset/css/style.css">
   <style>
     .log-table {
       width: 100%;

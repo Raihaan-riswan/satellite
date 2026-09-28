@@ -77,7 +77,7 @@ $satellites = $stmt->fetchAll();
 <head>
   <meta charset="UTF-8">
   <title>OrbitTrack - Satellites</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="asset/css/style.css">
   <style>
     .controls-bar {
       display: flex;

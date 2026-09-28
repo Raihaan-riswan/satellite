@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <title>OrbitTrack - My Profile</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="asset/css/style.css">
   <style>
     .profile-grid {
       display: grid;

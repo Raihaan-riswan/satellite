@@ -78,7 +78,7 @@ if (!empty($sat_id)) {
 <head>
   <meta charset="UTF-8">
   <title>OrbitTrack - Pass Predictions</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="asset/css/style.css">
   <style>
     .filter-card {
       background: var(--card-navy);
