@@ -3,13 +3,13 @@
 session_start();
 
 // Temporary demo session for testing (Remove once login page is built)
-// if (!isset($_SESSION['user_id'])) {
-//     $_SESSION['user_id'] = 1;
-//     $_SESSION['user_name'] = 'Kasun Perera';
-//     $_SESSION['role'] = 'admin'; // 'admin' or 'user'
-// }
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['user_id'] = 1;
+    $_SESSION['user_name'] = 'Kasun Perera';
+    $_SESSION['role'] = 'admin'; // 'admin' or 'user'
+}
 
-// require_once 'config/db.php';
+require_once 'config/db.php';
 
 // 1. Fetch KPI Metrics from MySQL
 $total_satellites = $pdo->query("SELECT COUNT(*) FROM satellites WHERE status = 'Active'")->fetchColumn() ?: 0;
