@@ -20,7 +20,7 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OrbitTrack - Live Map</title>
-  <link rel="stylesheet" href="asset/css/style.css">
+  <link rel="stylesheet" href="assets/css/style.css">
   
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -36,7 +36,7 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
       min-height: 500px;
       border-radius: 10px;
       border: 1px solid var(--border-blue, #334155);
-      background: #0b1120;
+      background: #050b14;
     }
     .leaflet-popup-content-wrapper {
       background: #1e293b;
@@ -55,20 +55,15 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
     .sat-dot {
       width: 12px;
       height: 12px;
-      background-color: #38bdf8;
+      background-color: #22d3ee;
       border: 2px solid #ffffff;
       border-radius: 50%;
-      box-shadow: 0 0 10px #38bdf8, 0 0 20px #38bdf8;
-      transition: transform 0.3s ease;
+      box-shadow: 0 0 10px #22d3ee, 0 0 20px #22d3ee;
+      transition: transform 0.2s ease;
     }
     .sat-dot:hover {
-      transform: scale(1.5);
-      background-color: #22d3ee;
-    }
-    .map-stats {
-      margin-top: 10px;
-      color: #94a3b8;
-      font-size: 0.85rem;
+      transform: scale(1.6);
+      background-color: #38bdf8;
     }
   </style>
 </head>
@@ -103,7 +98,7 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
           <h1>Live Satellite Tracking Map</h1>
           <p>Real-time orbital propagation and global positioning</p>
         </div>
-        <div class="map-stats">
+        <div style="color: #94a3b8; font-size: 0.85rem;">
           Tracked Objects: <strong id="active-count" style="color:#38bdf8;">0</strong>
         </div>
       </div>
@@ -115,26 +110,22 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
   </div>
 
   <script>
-    // Initialize Map
+    // Initialize Leaflet Map
     const map = L.map('map', {
       center: [20, 0],
       zoom: 2,
-      minZoom: 2,
-      maxBounds: [[-90, -180], [90, 180]]
+      minZoom: 2
     });
 
-    // Clean Dark Map Tiles (OSM Dark/Carto DB Free Tile Source)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-      subdomains: 'abcd',
+    // Option A: Esri World Imagery Satellite Map (No API Key Required)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USGS',
       maxZoom: 18
     }).addTo(map);
 
-    // Ingest PHP Satellite Data safely
     const rawSatellites = <?= json_encode($satellites); ?>;
     const markers = {};
 
-    // Custom Icon Definition
     const customIcon = L.divIcon({
       className: 'sat-marker',
       html: '<div class="sat-dot"></div>',
@@ -142,14 +133,12 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
       iconAnchor: [8, 8]
     });
 
-    // Helper: Normalize Longitude to [-180, 180]
     function normalizeLongitude(lng) {
       while (lng > 180) lng -= 360;
       while (lng < -180) lng += 360;
       return lng;
     }
 
-    // Function to calculate and update position
     function updatePositions() {
       const now = new Date();
       let activeCount = 0;
@@ -158,7 +147,6 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
         if (!sat.tle_line1 || !sat.tle_line2) return;
 
         try {
-          // Initialize satellite record
           const satrec = satellite.twoline2satrec(sat.tle_line1.trim(), sat.tle_line2.trim());
           const positionAndVelocity = satellite.propagate(satrec, now);
           const positionEci = positionAndVelocity.position;
@@ -175,7 +163,6 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
               activeCount++;
 
               if (markers[sat.id]) {
-                // Update position smooth move
                 markers[sat.id].setLatLng([lat, lng]);
                 markers[sat.id].setPopupContent(`
                   <strong style="color:#38bdf8; font-size:1rem;">${sat.name}</strong><br>
@@ -185,7 +172,6 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
                   <b>Lat/Lng:</b> ${lat.toFixed(2)}°, ${lng.toFixed(2)}°
                 `);
               } else {
-                // Create new marker
                 const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
                 marker.bindPopup(`
                   <strong style="color:#38bdf8; font-size:1rem;">${sat.name}</strong><br>
@@ -199,16 +185,15 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
             }
           }
         } catch (e) {
-          console.warn("Propagation error for satellite " + sat.name, e);
+          console.warn("Propagation error:", sat.name);
         }
       });
 
       document.getElementById('active-count').innerText = activeCount;
     }
 
-    // Initial render and set interval for real-time propagation (every 2s)
     setTimeout(() => {
-      map.invalidateSize(); // Fix map render bounds
+      map.invalidateSize();
       updatePositions();
     }, 200);
 
