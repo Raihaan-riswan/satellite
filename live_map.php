@@ -19,7 +19,7 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
   <meta charset="UTF-8">
   <title>OrbitTrack - Live Map</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="asset/css/style.css">
   
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
