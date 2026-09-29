@@ -9,57 +9,41 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once 'config/db.php';
 
-// Fetch active satellites with non-empty TLE data
-$stmt =$pdo->query("
-    SELECT id, name, norad_id, category, tle_line1, tle_line2 
-    FROM satellites 
-    WHERE status = 'Active' 
-      AND tle_line1 IS NOT NULL AND tle_line1 != ''
-      AND tle_line2 IS NOT NULL AND tle_line2 != ''
-");
-$satellites =$stmt->fetchAll();
+// Fetch active satellites with TLE data
+$stmt =$pdo->query("SELECT id, name, norad_id, category, tle_line1, tle_line2 FROM satellites WHERE status = 'Active' AND tle_line1 IS NOT NULL AND tle_line2 IS NOT NULL");
+$satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OrbitTrack - Live Tracking Map</title>
-  <link rel="stylesheet" href="asset/css/style.css">
+  <title>OrbitTrack - Live Map</title>
+  <link rel="stylesheet" href="assets/css/style.css">
   
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- Satellite.js library for TLE propagation -->
+  
+  <!-- satellite.js for orbital calculations -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.min.js"></script>
 
   <style>
     #map {
       width: 100%;
-      height: 650px;
-      border-radius: 12px;
-      border: 1px solid var(--border-blue);
+      height: calc(100vh - 120px);
+      border-radius: 10px;
+      border: 1px solid var(--border-blue, #334155);
+      background: #0b1120;
     }
-    .map-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
+    .leaflet-popup-content-wrapper {
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #38bdf8;
+      border-radius: 8px;
     }
-    .status-indicator {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }
-    .pulse-dot {
-      width: 10px;
-      height: 10px;
-      background-color: var(--status-active);
-      border-radius: 50%;
-      box-shadow: 0 0 8px var(--status-active);
+    .leaflet-popup-tip {
+      background: #1e293b;
     }
   </style>
 </head>
@@ -89,14 +73,10 @@ $satellites =$stmt->fetchAll();
 
     <!-- Main Workspace -->
     <main class="main-content">
-      <div class="map-header">
+      <div class="top-bar" style="margin-bottom: 15px;">
         <div>
-          <h1>Real-Time Live Map</h1>
-          <p>Plotting orbital positions using SGP4 TLE propagation</p>
-        </div>
-        <div class="status-indicator">
-          <div class="pulse-dot"></div>
-          <span>Live Signal (Refreshing every 2s)</span>
+          <h1>Live Satellite Tracking Map</h1>
+          <p>Real-time orbital propagation and global positioning</p>
         </div>
       </div>
 
@@ -107,93 +87,67 @@ $satellites =$stmt->fetchAll();
   </div>
 
   <script>
-    // 1. Pass PHP Satellites Data to JS
-    const satellitesData = <?= json_encode($satellites); ?>;
+    // Initialize Map centered globally
+    const map = L.map('map').setView([20, 0], 2);
 
-    // 2. Initialize Dark Tilemap (CartoDB Dark Matter)
-    const map = L.map('map').setView([0, 0], 2);
-
+    // Free CARTO Dark Matter Tiles (No API key required)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap &copy; CARTO',
       subdomains: 'abcd',
       maxZoom: 19
     }).addTo(map);
 
-    // Custom Satellite Icon Marker
-    const satIcon = L.divIcon({
-      className: 'custom-sat-icon',
-      html: `<div style="
-        width: 12px;
-        height: 12px;
-        background-color: #22d3ee;
-        border-radius: 50%;
-        border: 2px solid #fff;
-        box-shadow: 0 0 10px #22d3ee;
-      "></div>`,
-      iconSize: [12, 12],
-      iconAnchor: [6, 6]
-    });
-
+    // Load Satellites Data from PHP
+    const satData = <?= json_encode($satellites); ?>;
     const markers = {};
 
-    // 3. Function to Calculate Sat Position (Lat/Lng/Alt) using Satellite.js
-    function getSatPosition(tle1, tle2) {
-      try {
-        const satrec = satellite.twoline2satrec(tle1, tle2);
-        const now = new Date();
-        const positionAndVelocity = satellite.propagate(satrec, now);
-        const positionEci = positionAndVelocity.position;
-
-        if (!positionEci) return null;
-
-        const gmst = satellite.gstime(now);
-        const positionGd = satellite.eciToGeodetic(positionEci, gmst);
-
-        const latitude  = satellite.degreesLat(positionGd.latitude);
-        const longitude = satellite.degreesLong(positionGd.longitude);
-        const altitude  = Math.round(positionGd.height); // Altitude in km
-
-        return { lat: latitude, lng: longitude, alt: altitude };
-      } catch (err) {
-        return null;
-      }
-    }
-
-    // 4. Plot Initial Satellite Markers
-    satellitesData.forEach(sat => {
-      const pos = getSatPosition(sat.tle_line1, sat.tle_line2);
-      if (pos) {
-        const marker = L.marker([pos.lat, pos.lng], { icon: satIcon }).addTo(map);
-        marker.bindPopup(`
-          <div style="color: #0b1120;">
-            <strong>${sat.name}</strong><br>
-            NORAD ID: ${sat.norad_id}<br>
-            Category: ${sat.category}<br>
-            Altitude: ${pos.alt} km
-          </div>
-        `);
-        markers[sat.id] = { marker, tle1: sat.tle_line1, tle2: sat.tle_line2, name: sat.name, norad: sat.norad_id, category: sat.category };
-      }
+    // Custom Glowing Satellite Icon
+    const satIcon = L.divIcon({
+      className: 'custom-sat-icon',
+      html: '<div style="width: 12px; height: 12px; background: #38bdf8; border-radius: 50%; box-shadow: 0 0 10px #38bdf8;"></div>',
+      iconSize: [12, 12]
     });
 
-    // 5. Auto-Update Marker Positions Every 2 Seconds
-    setInterval(() => {
-      Object.keys(markers).forEach(id => {
-        const item = markers[id];
-        const pos = getSatPosition(item.tle1, item.tle2);
-        if (pos) {
-          item.marker.setLatLng([pos.lat, pos.lng]);
-          item.marker.getPopup().setContent(`
-            <div style="color: #0b1120;">
-              <strong>${item.name}</strong><br>
-              NORAD ID: ${item.norad}<br>
-              Category: ${item.category}<br>
-              Altitude: ${pos.alt} km
-            </div>
-          `);
+    // Update positions using satellite.js
+    function updateSatellitePositions() {
+      const now = new Date();
+
+      satData.forEach(sat => {
+        try {
+          const satrec = satellite.twoline2satrec(sat.tle_line1, sat.tle_line2);
+          const positionAndVelocity = satellite.propagate(satrec, now);
+          const positionEci = positionAndVelocity.position;
+
+          if (positionEci) {
+            const gmst = satellite.gstime(now);
+            const positionGd = satellite.eciToGeodetic(positionEci, gmst);
+
+            const lat = satellite.degreesLat(positionGd.latitude);
+            const lng = satellite.degreesLong(positionGd.longitude);
+            const alt = Math.round(positionGd.height);
+
+            if (markers[sat.id]) {
+              markers[sat.id].setLatLng([lat, lng]);
+            } else {
+              const marker = L.marker([lat, lng], { icon: satIcon }).addTo(map);
+              marker.bindPopup(`
+                <strong style="color:#38bdf8; font-size:1.1rem;">${sat.name}</strong><br>
+                <b>NORAD ID:</b> ${sat.norad_id}<br>
+                <b>Category:</b> ${sat.category}<br>
+                <b>Altitude:</b> ${alt} km
+              `);
+              markers[sat.id] = marker;
+            }
+          }
+        } catch (e) {
+          console.error("Error propagating satellite:", sat.name);
         }
       });
-    }, 2000);
+    }
+
+    // Run propagation once and update every 3 seconds
+    updateSatellitePositions();
+    setInterval(updateSatellitePositions, 3000);
   </script>
 
 </body>
