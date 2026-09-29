@@ -35,6 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_email']= $user['email'];
                 $_SESSION['role']      = $user['role'];
 
+                // Update Login and Last Activity Timestamps for Admin Tracking
+                $updateStmt = $pdo->prepare("UPDATE users SET last_login = NOW(), last_activity = NOW() WHERE id = :id");
+                $updateStmt->execute([':id' => $user['id']]);
+
                 header("Location: index.php");
                 exit();
             }
