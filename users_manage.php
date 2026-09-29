@@ -38,8 +38,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// --- Fetch All Users ---
-$stmt = $pdo->query("SELECT id, name, email, role, status, created_at FROM users ORDER BY created_at DESC");
+// --- Fetch User Metrics (KPI Cards) ---
+$totalSignups = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
+
+// Online users: active within the last 5 minutes
+$onlineCount = $pdo->query("SELECT COUNT(*) FROM users WHERE last_activity >= NOW() - INTERVAL 5 MINUTE")->fetchColumn();
+
+$blockedCount = $pdo->query("SELECT COUNT(*) FROM users WHERE status = 'blocked'")->fetchColumn();
+
+// --- Fetch All Users with Session Timestamps ---
+$stmt = $pdo->query("
+    SELECT id, name, email, role, status, created_at, last_login, last_logout, last_activity,
+           (last_activity >= NOW() - INTERVAL 5 MINUTE) AS is_online
+    FROM users 
+    ORDER BY created_at DESC
+");
 $users = $stmt->fetchAll();
 ?>
 
@@ -47,27 +60,54 @@ $users = $stmt->fetchAll();
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OrbitTrack - User Management</title>
-  <link rel="stylesheet" href="asset/css/style.css">
+  <link rel="stylesheet" href="assets/css/style.css">
   <style>
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+      margin-bottom: 25px;
+    }
+    .kpi-card {
+      background: var(--card-navy, #1e293b);
+      border: 1px solid var(--border-blue, #334155);
+      border-radius: 8px;
+      padding: 18px;
+    }
+    .kpi-title {
+      font-size: 0.8rem;
+      color: var(--text-muted, #94a3b8);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .kpi-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent-primary, #38bdf8);
+      margin-top: 8px;
+    }
+
     .user-table {
       width: 100%;
       border-collapse: collapse;
-      background: var(--card-navy);
+      background: var(--card-navy, #1e293b);
       border-radius: 8px;
       overflow: hidden;
-      border: 1px solid var(--border-blue);
-      margin-top: 20px;
+      border: 1px solid var(--border-blue, #334155);
     }
     .user-table th, .user-table td {
-      padding: 12px 16px;
+      padding: 12px 14px;
       text-align: left;
-      border-bottom: 1px solid var(--border-blue);
+      border-bottom: 1px solid var(--border-blue, #334155);
+      font-size: 0.88rem;
     }
     .user-table th {
       background: rgba(35, 51, 85, 0.5);
-      color: var(--text-muted);
-      font-size: 0.85rem;
+      color: var(--text-muted, #94a3b8);
+      font-size: 0.8rem;
       text-transform: uppercase;
     }
     .badge-role {
@@ -77,8 +117,8 @@ $users = $stmt->fetchAll();
       font-weight: 600;
       text-transform: uppercase;
     }
-    .role-admin { background: var(--accent-primary); color: #fff; }
-    .role-user { background: var(--border-blue); color: var(--text-muted); }
+    .role-admin { background: var(--accent-primary, #38bdf8); color: #0b1120; }
+    .role-user { background: var(--border-blue, #334155); color: var(--text-muted, #94a3b8); }
 
     .badge-status {
       padding: 3px 8px;
@@ -86,30 +126,55 @@ $users = $stmt->fetchAll();
       font-size: 0.75rem;
       font-weight: 600;
     }
-    .status-active { background: rgba(52, 211, 153, 0.2); color: var(--status-active); }
-    .status-blocked { background: rgba(248, 113, 113, 0.2); color: var(--status-danger); }
+    .status-active { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+    .status-blocked { background: rgba(248, 113, 113, 0.2); color: #f87171; }
+
+    .online-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot-online {
+      background-color: #34d399;
+      box-shadow: 0 0 8px #34d399;
+    }
+    .dot-offline {
+      background-color: #64748b;
+    }
 
     .btn-action {
       padding: 6px 12px;
       border-radius: 4px;
-      border: 1px solid var(--border-blue);
-      background: var(--bg-navy);
-      color: var(--text-primary);
+      border: 1px solid var(--border-blue, #334155);
+      background: var(--bg-navy, #0b1120);
+      color: var(--text-primary, #fff);
       cursor: pointer;
       font-size: 0.8rem;
       transition: all 0.2s;
     }
     .btn-action:hover {
-      border-color: var(--accent-primary);
+      border-color: var(--accent-primary, #38bdf8);
       color: #fff;
     }
     .btn-danger {
-      border-color: var(--status-danger);
-      color: var(--status-danger);
+      border-color: #f87171;
+      color: #f87171;
     }
     .btn-danger:hover {
-      background: var(--status-danger);
+      background: #f87171;
       color: #fff;
+    }
+    .time-text {
+      color: #94a3b8;
+      font-size: 0.8rem;
     }
   </style>
 </head>
@@ -140,22 +205,39 @@ $users = $stmt->fetchAll();
       <div class="top-bar">
         <div>
           <h1>User Management</h1>
-          <p>Control user accounts, permissions, and status access</p>
+          <p>Control user accounts, real-time activity, session times, and roles</p>
         </div>
       </div>
 
-      <?php if ($message): ?><p style="color: var(--status-active); margin-bottom: 15px;"><?= htmlspecialchars($message); ?></p><?php endif; ?>
-      <?php if ($error): ?><p style="color: var(--status-danger); margin-bottom: 15px;"><?= htmlspecialchars($error); ?></p><?php endif; ?>
+      <!-- KPI Summary Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">Total Signups</div>
+          <div class="kpi-value"><?= $totalSignups; ?></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Currently Online</div>
+          <div class="kpi-value" style="color: #34d399;"><?= $onlineCount; ?></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Blocked Users</div>
+          <div class="kpi-value" style="color: #f87171;"><?= $blockedCount; ?></div>
+        </div>
+      </div>
+
+      <?php if ($message): ?><p style="color: #34d399; margin-bottom: 15px;"><?= htmlspecialchars($message); ?></p><?php endif; ?>
+      <?php if ($error): ?><p style="color: #f87171; margin-bottom: 15px;"><?= htmlspecialchars($error); ?></p><?php endif; ?>
 
       <!-- Users Table -->
       <table class="user-table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Email</th>
+            <th>User</th>
             <th>Role</th>
             <th>Status</th>
+            <th>Online State</th>
+            <th>Last Login</th>
+            <th>Last Logout</th>
             <th>Joined</th>
             <th>Actions</th>
           </tr>
@@ -163,9 +245,10 @@ $users = $stmt->fetchAll();
         <tbody>
           <?php foreach ($users as $u): ?>
             <tr>
-              <td>#<?= $u['id']; ?></td>
-              <td><strong><?= htmlspecialchars($u['name']); ?></strong></td>
-              <td><?= htmlspecialchars($u['email']); ?></td>
+              <td>
+                <strong><?= htmlspecialchars($u['name']); ?></strong><br>
+                <span class="time-text"><?= htmlspecialchars($u['email']); ?></span>
+              </td>
               <td>
                 <span class="badge-role <?= $u['role'] === 'admin' ? 'role-admin' : 'role-user'; ?>">
                   <?= htmlspecialchars($u['role']); ?>
@@ -176,7 +259,20 @@ $users = $stmt->fetchAll();
                   <?= htmlspecialchars($u['status']); ?>
                 </span>
               </td>
-              <td><?= date('Y-m-d', strtotime($u['created_at'])); ?></td>
+              <td>
+                <?php if ($u['is_online']): ?>
+                  <span class="online-indicator" style="color:#34d399;"><span class="dot dot-online"></span> Online</span>
+                <?php else: ?>
+                  <span class="online-indicator" style="color:#94a3b8;"><span class="dot dot-offline"></span> Offline</span>
+                <?php endif; ?>
+              </td>
+              <td class="time-text">
+                <?= $u['last_login'] ? date('M d, H:i', strtotime($u['last_login'])) : 'Never'; ?>
+              </td>
+              <td class="time-text">
+                <?= $u['last_logout'] ? date('M d, H:i', strtotime($u['last_logout'])) : 'N/A'; ?>
+              </td>
+              <td class="time-text"><?= date('Y-m-d', strtotime($u['created_at'])); ?></td>
               <td>
                 <?php if ($u['id'] !== $_SESSION['user_id']): ?>
                   <div style="display:flex; gap:8px;">
@@ -201,7 +297,7 @@ $users = $stmt->fetchAll();
                     </form>
                   </div>
                 <?php else: ?>
-                  <span style="color: var(--text-muted); font-size: 0.8rem;">(You)</span>
+                  <span style="color: var(--text-muted, #94a3b8); font-size: 0.8rem;">(You)</span>
                 <?php endif; ?>
               </td>
             </tr>
