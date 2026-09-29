@@ -367,7 +367,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <form action="register.php" method="POST">
         <div class="form-group">
           <label>Full name</label>
-          <input type="text" name="full_name" placeholder="Jane Rodriguez" required value="<?= htmlspecialchars($_POST['full_name'] ?? ''); ?>">
+          <input type="text" name="full_name" placeholder="Raihaan Riswan" required value="<?= htmlspecialchars($_POST['full_name'] ?? ''); ?>">
         </div>
 
         <div class="form-group">
