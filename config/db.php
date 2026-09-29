@@ -18,4 +18,14 @@ try {
 } catch (\PDOException $e) {
     die("Database Connection Error: " . $e->getMessage());
 }
+
+// Track active sessions across all pages for real-time online status
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (isset($_SESSION['user_id'])) {
+    $stmt = $pdo->prepare("UPDATE users SET last_activity = NOW() WHERE id = :id");
+    $stmt->execute([':id' => $_SESSION['user_id']]);
+}
 ?>
