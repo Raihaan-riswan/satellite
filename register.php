@@ -71,20 +71,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     body {
       min-height: 100vh;
       background-color: #060913;
-      background-image: 
-        radial-gradient(circle at 10% 80%, rgba(138, 75, 40, 0.22) 0%, rgba(6, 9, 19, 0.95) 45%),
-        radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
-        radial-gradient(1.5px 1.5px at 100px 150px, #ffffff, rgba(0,0,0,0)),
-        radial-gradient(1px 1px at 250px 80px, #ffffff, rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 450px 300px, #ffffff, rgba(0,0,0,0)),
-        radial-gradient(1.5px 1.5px at 700px 200px, #ffffff, rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 850px 450px, #ffffff, rgba(0,0,0,0)),
-        radial-gradient(1px 1px at 950px 120px, #ffffff, rgba(0,0,0,0));
-      background-repeat: repeat;
       color: #ffffff;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Starfield Canvas Background Animation */
+    .star-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 200%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .stars-small {
+      background-image: 
+        radial-gradient(1.5px 1.5px at 50px 100px, #ffffff, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 150px 300px, rgba(255,255,255,0.8), rgba(0,0,0,0)),
+        radial-gradient(1.5px 1.5px at 280px 70px, #ffffff, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 400px 420px, rgba(255,255,255,0.9), rgba(0,0,0,0)),
+        radial-gradient(1.5px 1.5px at 550px 200px, #ffffff, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 720px 500px, rgba(255,255,255,0.7), rgba(0,0,0,0)),
+        radial-gradient(1.5px 1.5px at 880px 120px, #ffffff, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 980px 350px, rgba(255,255,255,0.9), rgba(0,0,0,0));
+      background-size: 600px 600px;
+      animation: moveStars 60s linear infinite;
+      opacity: 0.7;
+    }
+
+    .stars-large {
+      background-image: 
+        radial-gradient(2.5px 2.5px at 100px 250px, #38bdf8, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 320px 150px, #ffffff, rgba(0,0,0,0)),
+        radial-gradient(2.5px 2.5px at 620px 380px, #818cf8, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 800px 80px, #ffffff, rgba(0,0,0,0));
+      background-size: 800px 800px;
+      animation: moveStars 35s linear infinite, twinkle 4s ease-in-out infinite alternate;
+      opacity: 0.85;
+    }
+
+    .nebula-glow {
+      position: fixed;
+      bottom: -10%;
+      left: -10%;
+      width: 60vw;
+      height: 60vw;
+      background: radial-gradient(circle, rgba(138, 75, 40, 0.22) 0%, rgba(6, 9, 19, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes moveStars {
+      from { transform: translateY(0); }
+      to { transform: translateY(-600px); }
+    }
+
+    @keyframes twinkle {
+      0% { opacity: 0.3; }
+      100% { opacity: 0.9; }
     }
 
     /* Top Left Header */
@@ -98,6 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-weight: 600;
       font-size: 1.05rem;
       color: #ffffff;
+      z-index: 2;
     }
     .top-brand svg {
       width: 22px;
@@ -109,6 +160,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* Main Container Split */
     .page-container {
+      position: relative;
+      z-index: 1;
       display: flex;
       width: 100%;
       min-height: 100vh;
@@ -138,14 +191,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* Auth Card Right */
     .auth-card {
-      background: rgba(13, 20, 36, 0.75);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      background: rgba(13, 20, 36, 0.82);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 16px;
       padding: 40px;
       width: 100%;
       max-width: 480px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
     }
 
     .auth-card h2 {
@@ -334,6 +387,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 
+  <!-- Moving Starfield & Nebula Layers -->
+  <div class="star-layer stars-small"></div>
+  <div class="star-layer stars-large"></div>
+  <div class="nebula-glow"></div>
+
   <!-- Brand Navigation Header -->
   <div class="top-brand">
     <svg viewBox="0 0 24 24">
@@ -367,7 +425,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <form action="register.php" method="POST">
         <div class="form-group">
           <label>Full name</label>
-          <input type="text" name="full_name" placeholder="Raihaan Riswan" required value="<?= htmlspecialchars($_POST['full_name'] ?? ''); ?>">
+          <input type="text" name="full_name" placeholder="Jane Rodriguez" required value="<?= htmlspecialchars($_POST['full_name'] ?? ''); ?>">
         </div>
 
         <div class="form-group">
