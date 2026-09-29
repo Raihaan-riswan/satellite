@@ -1,5 +1,5 @@
 <?php
-// live_map.php - Real-Time Satellite Tracking Map
+// live_map.php - Real-Time Satellite Tracking Map & Live Camera
 session_start();
 
 if (!isset($_SESSION['user_id'])) {
@@ -19,8 +19,8 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OrbitTrack - Live Map</title>
-  <link rel="stylesheet" href="asset/css/style.css">
+  <title>OrbitTrack - Live Map & Video</title>
+  <link rel="stylesheet" href="assets/css/style.css">
   
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -30,13 +30,54 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
   <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.1.3/satellite.min.js"></script>
 
   <style>
+    .map-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 1100px) {
+      .map-grid {
+        grid-template-columns: 1fr;
+      }
+    }
     #map {
       width: 100%;
-      height: calc(100vh - 140px);
-      min-height: 500px;
+      height: 600px;
       border-radius: 10px;
       border: 1px solid var(--border-blue, #334155);
       background: #050b14;
+    }
+    .video-card {
+      background: var(--card-navy, #1e293b);
+      border: 1px solid var(--border-blue, #334155);
+      border-radius: 10px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+    }
+    .video-card h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 1rem;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .video-wrapper {
+      position: relative;
+      padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+      height: 0;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+    .video-wrapper iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
     }
     .leaflet-popup-content-wrapper {
       background: #1e293b;
@@ -93,33 +134,55 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <!-- Main Workspace -->
     <main class="main-content">
-      <div class="top-bar" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+      <div class="top-bar" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <h1>Live Satellite Tracking Map</h1>
-          <p>Real-time orbital propagation and global positioning</p>
+          <h1>Live Satellite Tracking & Camera Feed</h1>
+          <p>Real-time orbital propagation and live space video</p>
         </div>
         <div style="color: #94a3b8; font-size: 0.85rem;">
           Tracked Objects: <strong id="active-count" style="color:#38bdf8;">0</strong>
         </div>
       </div>
 
-      <!-- Map Container -->
-      <div id="map"></div>
+      <!-- Grid containing Map and Video Feed -->
+      <div class="map-grid">
+        
+        <!-- Live Map Column -->
+        <div id="map"></div>
+
+        <!-- Live Stream Panel -->
+        <div class="video-card">
+          <h3>🔴 ISS Live Earth Camera (NASA Feed)</h3>
+          <div class="video-wrapper">
+            <iframe 
+              src="https://www.youtube.com/embed/P9C25Un7x14?autoplay=1&mute=1" 
+              title="NASA ISS Live Feed" 
+              frameborder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen>
+            </iframe>
+          </div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 12px; line-height: 1.4;">
+            Live High-Definition video feed of Earth from the International Space Station (ISS) external views. Note: Black screens indicate orbital darkness or signal transitions.
+          </p>
+        </div>
+
+      </div>
     </main>
 
   </div>
 
   <script>
-    // Initialize Leaflet Map
+    // Initialize Map
     const map = L.map('map', {
       center: [20, 0],
       zoom: 2,
       minZoom: 2
     });
 
-    // Option A: Esri World Imagery Satellite Map (No API Key Required)
+    // Esri World Imagery Satellite Map
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USGS',
+      attribution: 'Tiles &copy; Esri',
       maxZoom: 18
     }).addTo(map);
 
