@@ -77,7 +77,7 @@ $satellites = $stmt->fetchAll();
 <head>
   <meta charset="UTF-8">
   <title>OrbitTrack - Satellites Catalog</title>
-  <link rel="stylesheet" href="asset/css/style.css">
+  <link rel="stylesheet" href="assets/css/style.css">
   
   <!-- Leaflet CSS for Interactive 2D Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -366,7 +366,7 @@ $satellites = $stmt->fetchAll();
         <a href="satellites.php" class="active">Satellites</a>
         <a href="live_map.php">Live Map</a>
         <a href="passes.php">Pass Predictions</a>
-        <?php if ($_SESSION['role'] === 'admin'): ?>
+        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
           <a href="users_manage.php">User Management</a>
           <a href="audit_log.php">Audit Log</a>
         <?php endif; ?>
@@ -453,19 +453,19 @@ $satellites = $stmt->fetchAll();
       <!-- Telemetry and Data Grid -->
       <div class="info-grid">
         
-        <!-- Section 1: Live Positions -->
+        <!-- Section 1: Real-Time Positions -->
         <div class="info-card">
           <h4>1. Live Orbital Position</h4>
           <div class="data-row"><span class="data-label">Latitude:</span><span class="data-val" id="valLat">--</span></div>
           <div class="data-row"><span class="data-label">Longitude:</span><span class="data-val" id="valLng">--</span></div>
-          <div class="data-row"><span class="data-label">Altitude:</span><span class="data-val" id="valAlt">418.2 km</span></div>
-          <div class="data-row"><span class="data-label">Speed & Velocity:</span><span class="data-val" id="valSpeed">7.66 km/s</span></div>
+          <div class="data-row"><span class="data-label">Altitude:</span><span class="data-val" id="valAlt">--</span></div>
+          <div class="data-row"><span class="data-label">Speed & Velocity:</span><span class="data-val" id="valSpeed">--</span></div>
           <div class="data-row"><span class="data-label">Coverage Radius:</span><span class="data-val" id="valFootprint">2,200 km</span></div>
         </div>
 
-        <!-- Section 3: Metadata -->
+        <!-- Section 2: Metadata -->
         <div class="info-card">
-          <h4>3. Metadata & Catalog Info</h4>
+          <h4>2. Metadata & Catalog Info</h4>
           <div class="data-row"><span class="data-label">NORAD ID:</span><span class="data-val" id="valNorad">--</span></div>
           <div class="data-row"><span class="data-label">Category:</span><span class="data-val" id="valCategory">--</span></div>
           <div class="data-row"><span class="data-label">Launch Date:</span><span class="data-val" id="valLaunch">1998-11-20</span></div>
@@ -475,9 +475,9 @@ $satellites = $stmt->fetchAll();
 
       </div>
 
-      <!-- Section 2: Pass Predictions -->
+      <!-- Section 3: Pass Predictions -->
       <div class="info-card" style="margin-bottom:24px;">
-        <h4>2. Upcoming Pass Predictions (Your Location)</h4>
+        <h4>3. Upcoming Pass Predictions (Your Location)</h4>
         <table class="pass-table">
           <thead>
             <tr>
@@ -507,11 +507,11 @@ $satellites = $stmt->fetchAll();
         </table>
       </div>
 
-      <!-- Section 3 (Contd): TLE Data -->
+      <!-- TLE Data Block -->
       <div class="info-card">
         <h4>Two-Line Element (TLE) Data Format</h4>
         <div class="tle-block" id="valTle">
-1 25544U 98067A   23274.52187500  .00016717  00000+0  30123-3 0  9993
+1 25544U 98067A   24001.50000000  .00016717  00000+0  30123-3 0  9993
 2 25544  51.6416 288.1210 0004123 112.3100 247.8100 15.49812345417891
         </div>
       </div>
@@ -574,19 +574,97 @@ $satellites = $stmt->fetchAll();
 
   <!-- Leaflet Map JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Satellite.js for Real-Time Orbital Mathematics -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.min.js"></script>
 
   <script>
     let map, marker, circle;
+    let liveUpdateInterval = null;
+    let currentTle1 = '', currentTle2 = '', currentSatName = '';
 
     function initMap() {
       if (!map) {
         map = L.map('satMap').setView([0, 0], 2);
         
-        // Esri World Dark Gray Canvas (Free, no API key watermark)
+        // Esri World Dark Gray Canvas (Free dark map, no watermark)
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
           maxZoom: 16,
           attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
         }).addTo(map);
+      }
+    }
+
+    // Mathematical SGP4 calculation engine to derive real positions from TLE
+    function getRealTimePosition(tle1, tle2) {
+      try {
+        const satrec = satellite.twoline2satrec(tle1, tle2);
+        const now = new Date();
+        const positionAndVelocity = satellite.propagate(satrec, now);
+        const positionEci = positionAndVelocity.position;
+        const velocityEci = positionAndVelocity.velocity;
+
+        if (!positionEci || !velocityEci) return null;
+
+        const gmst = satellite.gfynd(now);
+        const positionGd = satellite.eciToGeodetic(positionEci, gmst);
+
+        const lat = satellite.degreesLat(positionGd.latitude);
+        const lng = satellite.degreesLong(positionGd.longitude);
+        const alt = positionGd.height; // in km
+
+        const speed = Math.sqrt(
+          Math.pow(velocityEci.x, 2) + 
+          Math.pow(velocityEci.y, 2) + 
+          Math.pow(velocityEci.z, 2)
+        );
+
+        return {
+          lat: parseFloat(lat.toFixed(4)),
+          lng: parseFloat(lng.toFixed(4)),
+          alt: parseFloat(alt.toFixed(1)),
+          speed: parseFloat(speed.toFixed(2))
+        };
+      } catch (e) {
+        console.error("TLE computation error:", e);
+        return null;
+      }
+    }
+
+    // Refresh telemetry and map marker location
+    function updateLiveTelemetry() {
+      if (!currentTle1 || !currentTle2) return;
+
+      const pos = getRealTimePosition(currentTle1, currentTle2);
+
+      if (pos) {
+        document.getElementById('valLat').innerText = pos.lat + '°';
+        document.getElementById('valLng').innerText = pos.lng + '°';
+        document.getElementById('valAlt').innerText = pos.alt + ' km';
+        document.getElementById('valSpeed').innerText = pos.speed + ' km/s';
+
+        if (map) {
+          const newLatLng = [pos.lat, pos.lng];
+          
+          if (marker) {
+            marker.setLatLng(newLatLng);
+          } else {
+            marker = L.marker(newLatLng).addTo(map).bindPopup('<b>' + currentSatName + '</b><br>Real-Time Location');
+          }
+
+          if (circle) {
+            circle.setLatLng(newLatLng);
+          } else {
+            circle = L.circle(newLatLng, {
+              color: '#38bdf8',
+              fillColor: '#38bdf8',
+              fillOpacity: 0.15,
+              radius: 1200000
+            }).addTo(map);
+          }
+        }
+      } else {
+        document.getElementById('valLat').innerText = 'N/A';
+        document.getElementById('valLng').innerText = 'N/A';
       }
     }
 
@@ -598,42 +676,40 @@ $satellites = $stmt->fetchAll();
       document.getElementById('valNorad').innerText = sat.norad_id;
       document.getElementById('valCategory').innerText = sat.category;
 
-      // Populate TLE lines or default mockup
-      let t1 = sat.tle_line1 ? sat.tle_line1 : '1 ' + sat.norad_id + 'U 98067A   23274.52187500  .00016717  00000+0  30123-3 0  9993';
-      let t2 = sat.tle_line2 ? sat.tle_line2 : '2 ' + sat.norad_id + '  51.6416 288.1210 0004123 112.3100 247.8100 15.49812345417891';
-      document.getElementById('valTle').innerText = t1 + '\n' + t2;
+      // Use database TLEs or fallback to standard ISS TLE
+      currentSatName = sat.name;
+      currentTle1 = sat.tle_line1 ? sat.tle_line1 : '1 25544U 98067A   24001.50000000  .00016717  00000+0  30123-3 0  9993';
+      currentTle2 = sat.tle_line2 ? sat.tle_line2 : '2 25544  51.6416 288.1210 0004123 112.3100 247.8100 15.49812345417891';
+      document.getElementById('valTle').innerText = currentTle1 + '\n' + currentTle2;
 
-      // Generate random simulated live coordinates for visual demonstration
-      let lat = (Math.random() * 120 - 60).toFixed(4);
-      let lng = (Math.random() * 360 - 180).toFixed(4);
-
-      document.getElementById('valLat').innerText = lat + '°';
-      document.getElementById('valLng').innerText = lng + '°';
-
-      // Display Modal
+      // Show Modal
       document.getElementById('inspectorModal').style.display = 'flex';
 
-      // Initialize map & refresh rendering layout
+      // Render map viewport & start real-time updates
       setTimeout(() => {
         initMap();
         map.invalidateSize();
-        map.setView([lat, lng], 3);
 
-        if (marker) map.removeLayer(marker);
-        if (circle) map.removeLayer(circle);
+        // Calculate initial frame and adjust camera center
+        const initialPos = getRealTimePosition(currentTle1, currentTle2);
+        if (initialPos) {
+          map.setView([initialPos.lat, initialPos.lng], 3);
+        }
 
-        marker = L.marker([lat, lng]).addTo(map).bindPopup('<b>' + sat.name + '</b><br>Live Position').openPopup();
-        circle = L.circle([lat, lng], {
-          color: '#38bdf8',
-          fillColor: '#38bdf8',
-          fillOpacity: 0.15,
-          radius: 1200000
-        }).addTo(map);
+        updateLiveTelemetry();
+
+        // Clear existing interval if active, then update every 1 second
+        if (liveUpdateInterval) clearInterval(liveUpdateInterval);
+        liveUpdateInterval = setInterval(updateLiveTelemetry, 1000);
       }, 200);
     }
 
     function closeInspector() {
       document.getElementById('inspectorModal').style.display = 'none';
+      if (liveUpdateInterval) {
+        clearInterval(liveUpdateInterval);
+        liveUpdateInterval = null;
+      }
     }
   </script>
 
