@@ -27,39 +27,101 @@ $logs = $stmt->fetchAll();
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OrbitTrack - Audit Logs</title>
   <link rel="stylesheet" href="asset/css/style.css">
   <style>
+    :root {
+      --bg-space: #070a12;
+      --card-navy: #0e1726;
+      --border-blue: #1e293b;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-cyan: #38bdf8;
+    }
+    body {
+      background-color: var(--bg-space);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+    }
+    .dashboard-container { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px;
+      background: #0b1120;
+      border-right: 1px solid var(--border-blue);
+      padding: 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; }
+    .brand-dot { width: 12px; height: 12px; background: var(--accent-cyan); border-radius: 50%; box-shadow: 0 0 10px var(--accent-cyan); }
+    .brand h2 { font-size: 1.1rem; letter-spacing: 1.5px; margin: 0; color: #fff; }
+    .sidebar nav a {
+      display: block;
+      padding: 12px 16px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .sidebar nav a:hover, .sidebar nav a.active {
+      background: var(--border-blue);
+      color: var(--accent-cyan);
+    }
+    .main-content { flex: 1; padding: 32px; overflow-y: auto; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .top-bar h1 { font-size: 1.6rem; margin: 0 0 6px 0; font-weight: 600; }
+    .top-bar p { color: var(--text-muted); margin: 0; font-size: 0.88rem; }
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--card-navy);
+      border: 1px solid var(--border-blue);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    .badge-role {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-cyan);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
     .log-table {
       width: 100%;
       border-collapse: collapse;
       background: var(--card-navy);
-      border-radius: 8px;
+      border-radius: 12px;
       overflow: hidden;
       border: 1px solid var(--border-blue);
-      margin-top: 20px;
     }
     .log-table th, .log-table td {
-      padding: 12px 16px;
+      padding: 14px 16px;
       text-align: left;
       border-bottom: 1px solid var(--border-blue);
+      font-size: 0.88rem;
     }
     .log-table th {
-      background: rgba(35, 51, 85, 0.5);
+      background: rgba(15, 23, 42, 0.6);
       color: var(--text-muted);
-      font-size: 0.85rem;
+      font-size: 0.78rem;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .badge-action {
       padding: 3px 8px;
-      border-radius: 10px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
       text-transform: uppercase;
     }
-    .action-created { background: rgba(52, 211, 153, 0.2); color: var(--status-active); }
-    .action-updated { background: rgba(59, 130, 246, 0.2); color: var(--accent-primary); }
-    .action-deleted { background: rgba(248, 113, 113, 0.2); color: var(--status-danger); }
+    .action-created { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+    .action-updated { background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan); }
+    .action-deleted { background: rgba(248, 113, 113, 0.15); color: #f87171; }
   </style>
 </head>
 <body>
@@ -91,6 +153,12 @@ $logs = $stmt->fetchAll();
           <h1>System Audit Log</h1>
           <p>Complete historical record of user activities and dataset updates</p>
         </div>
+        <?php if (isset($_SESSION['user_name'])): ?>
+          <div class="user-badge">
+            <span><?= htmlspecialchars($_SESSION['user_name']); ?></span>
+            <span class="badge-role"><?= strtoupper(htmlspecialchars($_SESSION['role'])); ?></span>
+          </div>
+        <?php endif; ?>
       </div>
 
       <!-- Audit Logs Table -->
@@ -107,14 +175,14 @@ $logs = $stmt->fetchAll();
         <tbody>
           <?php if (empty($logs)): ?>
             <tr>
-              <td colspan="5" style="color: var(--text-muted); text-align: center;">No activity recorded yet.</td>
+              <td colspan="5" style="color: var(--text-muted); text-align: center; padding: 24px;">No activity recorded yet.</td>
             </tr>
           <?php else: ?>
             <?php foreach ($logs as $log): ?>
               <tr>
-                <td>#<?= $log['id']; ?></td>
+                <td style="color: var(--text-muted);">#<?= $log['id']; ?></td>
                 <td><?= date('Y-m-d H:i:s', strtotime($log['timestamp'])); ?></td>
-                <td><strong><?= htmlspecialchars($log['user_name']); ?></strong></td>
+                <td><strong style="color: var(--text-primary);"><?= htmlspecialchars($log['user_name']); ?></strong></td>
                 <td><?= htmlspecialchars($log['sat_name']); ?></td>
                 <td>
                   <?php 
