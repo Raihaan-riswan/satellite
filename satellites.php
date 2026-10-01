@@ -581,9 +581,11 @@ $satellites = $stmt->fetchAll();
     function initMap() {
       if (!map) {
         map = L.map('satMap').setView([0, 0], 2);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          maxZoom: 18,
-          attribution: '&copy; OpenStreetMap &copy; CARTO'
+        
+        // Esri World Dark Gray Canvas (Free, no API key watermark)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+          maxZoom: 16,
+          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
         }).addTo(map);
       }
     }
