@@ -9,22 +9,17 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once 'config/db.php';
 
-// Default observer location (e.g., Colombo / Sri Lanka coordinates)
 $observer_lat = $_GET['lat'] ?? '6.9271';
 $observer_lng = $_GET['lng'] ?? '79.8612';
 $sat_id       = $_GET['sat_id'] ?? '';
 
-// Fetch active satellites for dropdown selection
 $sat_stmt = $pdo->query("SELECT id, name, norad_id FROM satellites WHERE status = 'Active' ORDER BY name ASC");
 $satellites = $sat_stmt->fetchAll();
 
-// Optional N2YO API Key (Replace with your actual key if available)
 $api_key = 'YOUR_N2YO_API_KEY'; 
 $passes = [];
-$error_msg = '';
 
 if (!empty($sat_id)) {
-    // Find selected satellite's NORAD ID
     $selected_sat = null;
     foreach ($satellites as $s) {
         if ($s['id'] == $sat_id) {
@@ -34,7 +29,6 @@ if (!empty($sat_id)) {
     }
 
     if ($selected_sat && $api_key !== 'YOUR_N2YO_API_KEY') {
-        // Fetch real visual pass predictions from N2YO API
         $apiUrl = "https://api.n2yo.com/rest/v1/satellite/visualpasses/{$selected_sat['norad_id']}/{$observer_lat}/{$observer_lng}/0/10/300/&apiKey={$api_key}";
         
         $ch = curl_init();
@@ -50,7 +44,6 @@ if (!empty($sat_id)) {
             }
         }
     } else {
-        // Mock pass data for local testing when API key is not set
         $passes = [
             [
                 'startUTC' => time() + 3600,
@@ -80,68 +73,117 @@ if (!empty($sat_id)) {
   <title>OrbitTrack - Pass Predictions</title>
   <link rel="stylesheet" href="asset/css/style.css">
   <style>
+    :root {
+      --bg-space: #070a12;
+      --card-navy: #0e1726;
+      --border-blue: #1e293b;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-cyan: #38bdf8;
+    }
+    body {
+      background-color: var(--bg-space);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+    }
+    .dashboard-container { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px;
+      background: #0b1120;
+      border-right: 1px solid var(--border-blue);
+      padding: 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; }
+    .brand-dot { width: 12px; height: 12px; background: var(--accent-cyan); border-radius: 50%; box-shadow: 0 0 10px var(--accent-cyan); }
+    .brand h2 { font-size: 1.1rem; letter-spacing: 1.5px; margin: 0; color: #fff; }
+    .sidebar nav a {
+      display: block;
+      padding: 12px 16px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .sidebar nav a:hover, .sidebar nav a.active {
+      background: var(--border-blue);
+      color: var(--accent-cyan);
+    }
+    .main-content { flex: 1; padding: 32px; overflow-y: auto; }
+    .top-bar { margin-bottom: 24px; }
+    .top-bar h1 { font-size: 1.6rem; margin: 0 0 6px 0; font-weight: 600; }
+    .top-bar p { color: var(--text-muted); margin: 0; font-size: 0.88rem; }
+    
     .filter-card {
       background: var(--card-navy);
       border: 1px solid var(--border-blue);
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 20px;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
     }
     .form-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
+      gap: 16px;
       align-items: end;
     }
     .form-group label {
       display: block;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: var(--text-muted);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
     .form-group input, .form-group select {
       width: 100%;
-      padding: 9px 12px;
-      background: var(--bg-navy);
+      padding: 10px 14px;
+      background: #0b1120;
       border: 1px solid var(--border-blue);
       color: var(--text-primary);
-      border-radius: 6px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      box-sizing: border-box;
     }
     .btn-predict {
-      padding: 10px 18px;
-      background: var(--accent-primary);
-      color: #fff;
+      padding: 10px 20px;
+      background: var(--accent-cyan);
+      color: #0b1120;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
+      width: 100%;
+      font-size: 0.9rem;
     }
+    .btn-predict:hover { background: #7dd3fc; }
+    
     .passes-table {
       width: 100%;
       border-collapse: collapse;
       background: var(--card-navy);
-      border-radius: 8px;
+      border-radius: 12px;
       overflow: hidden;
       border: 1px solid var(--border-blue);
     }
     .passes-table th, .passes-table td {
-      padding: 12px 16px;
+      padding: 14px 16px;
       text-align: left;
       border-bottom: 1px solid var(--border-blue);
+      font-size: 0.88rem;
     }
     .passes-table th {
-      background: rgba(35, 51, 85, 0.5);
+      background: rgba(15, 23, 42, 0.6);
       color: var(--text-muted);
-      font-size: 0.85rem;
+      font-size: 0.78rem;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
   </style>
 </head>
 <body>
 
   <div class="dashboard-container">
-    
-    <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-dot"></div>
@@ -161,16 +203,12 @@ if (!empty($sat_id)) {
       </nav>
     </aside>
 
-    <!-- Main Workspace -->
     <main class="main-content">
       <div class="top-bar">
-        <div>
-          <h1>Pass Predictions</h1>
-          <p>Calculate visible satellite passes over your observation coordinates</p>
-        </div>
+        <h1>Pass Predictions</h1>
+        <p>Calculate visible satellite passes over your observation coordinates</p>
       </div>
 
-      <!-- Location & Satellite Selector Form -->
       <div class="filter-card">
         <form method="GET" class="form-grid">
           <div class="form-group">
@@ -201,7 +239,6 @@ if (!empty($sat_id)) {
         </form>
       </div>
 
-      <!-- Pass Output Table -->
       <table class="passes-table">
         <thead>
           <tr>
@@ -213,14 +250,14 @@ if (!empty($sat_id)) {
         </thead>
         <tbody>
           <?php if (empty($sat_id)): ?>
-            <tr><td colspan="4" style="color: var(--text-muted); text-align: center;">Select a satellite and click "Calculate Passes".</td></tr>
+            <tr><td colspan="4" style="color: var(--text-muted); text-align: center; padding: 24px;">Select a satellite and click "Calculate Passes".</td></tr>
           <?php elseif (empty($passes)): ?>
-            <tr><td colspan="4" style="color: var(--text-muted); text-align: center;">No visible passes found for the selected timeframe.</td></tr>
+            <tr><td colspan="4" style="color: var(--text-muted); text-align: center; padding: 24px;">No visible passes found for the selected timeframe.</td></tr>
           <?php else: ?>
             <?php foreach ($passes as $p): ?>
               <tr>
-                <td><strong><?= date('Y-m-d H:i:s', $p['startUTC']); ?></strong></td>
-                <td><?= $p['maxEl']; ?>°</td>
+                <td><strong style="color:var(--text-primary);"><?= date('Y-m-d H:i:s', $p['startUTC']); ?></strong></td>
+                <td><span style="color:var(--accent-cyan); font-weight:600;"><?= $p['maxEl']; ?>°</span></td>
                 <td><?= $p['startAzCompass']; ?> &rarr; <?= $p['maxAzCompass']; ?> &rarr; <?= $p['endAzCompass']; ?></td>
                 <td><?= floor($p['duration'] / 60); ?>m <?= $p['duration'] % 60; ?>s</td>
               </tr>
@@ -228,9 +265,7 @@ if (!empty($sat_id)) {
           <?php endif; ?>
         </tbody>
       </table>
-
     </main>
-
   </div>
 
 </body>

@@ -11,10 +11,8 @@ require_once 'config/db.php';
 
 $message = '';
 $error = '';
-
 $user_id = $_SESSION['user_id'];
 
-// --- Fetch Current User Data ---
 $stmt = $pdo->prepare("SELECT id, name, email, role, status, created_at FROM users WHERE id = :id");
 $stmt->execute([':id' => $user_id]);
 $user = $stmt->fetch();
@@ -24,11 +22,9 @@ if (!$user) {
     exit();
 }
 
-// --- Handle Updates ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    // Update Profile Info
     if ($action === 'update_profile') {
         $name  = trim($_POST['full_name'] ?? '');
         $email = trim($_POST['email'] ?? '');
@@ -38,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = 'Please enter a valid email address.';
         } else {
-            // Check email uniqueness if modified
             $checkStmt = $pdo->prepare("SELECT id FROM users WHERE email = :email AND id != :id");
             $checkStmt->execute([':email' => $email, ':id' => $user_id]);
 
@@ -57,15 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
-    }
-
-    // Change Password
-    elseif ($action === 'change_password') {
+    } elseif ($action === 'change_password') {
         $current_password = $_POST['current_password'] ?? '';
         $new_password     = $_POST['new_password'] ?? '';
         $confirm_password = $_POST['confirm_password'] ?? '';
 
-        // Fetch current password hash
         $pwdStmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = :id");
         $pwdStmt->execute([':id' => $user_id]);
         $current_hash = $pwdStmt->fetchColumn();
@@ -96,62 +87,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title>OrbitTrack - My Profile</title>
   <link rel="stylesheet" href="asset/css/style.css">
   <style>
+    :root {
+      --bg-space: #070a12;
+      --card-navy: #0e1726;
+      --border-blue: #1e293b;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-cyan: #38bdf8;
+    }
+    body {
+      background-color: var(--bg-space);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+    }
+    .dashboard-container { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px;
+      background: #0b1120;
+      border-right: 1px solid var(--border-blue);
+      padding: 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; }
+    .brand-dot { width: 12px; height: 12px; background: var(--accent-cyan); border-radius: 50%; box-shadow: 0 0 10px var(--accent-cyan); }
+    .brand h2 { font-size: 1.1rem; letter-spacing: 1.5px; margin: 0; color: #fff; }
+    .sidebar nav a {
+      display: block;
+      padding: 12px 16px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .sidebar nav a:hover, .sidebar nav a.active {
+      background: var(--border-blue);
+      color: var(--accent-cyan);
+    }
+    .main-content { flex: 1; padding: 32px; overflow-y: auto; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .top-bar h1 { font-size: 1.6rem; margin: 0 0 6px 0; font-weight: 600; }
+    .top-bar p { color: var(--text-muted); margin: 0; font-size: 0.88rem; }
+
     .profile-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 20px;
-      margin-top: 20px;
     }
-    .form-group {
-      margin-bottom: 15px;
+    .card {
+      background: var(--card-navy);
+      border: 1px solid var(--border-blue);
+      border-radius: 12px;
+      padding: 24px;
     }
+    .card h3 { margin: 0 0 16px 0; font-size: 1.1rem; }
+    
+    .form-group { margin-bottom: 16px; }
     .form-group label {
       display: block;
-      margin-bottom: 6px;
-      font-size: 0.85rem;
+      margin-bottom: 8px;
+      font-size: 0.82rem;
       color: var(--text-muted);
     }
     .form-group input {
       width: 100%;
-      padding: 10px 12px;
-      background: var(--bg-navy);
+      padding: 10px 14px;
+      background: #0b1120;
       border: 1px solid var(--border-blue);
-      border-radius: 6px;
+      border-radius: 8px;
       color: var(--text-primary);
-      font-size: 0.95rem;
+      font-size: 0.9rem;
+      box-sizing: border-box;
     }
     .form-group input:focus {
       outline: none;
-      border-color: var(--accent-primary);
+      border-color: var(--accent-cyan);
     }
     .btn-submit {
-      padding: 10px 18px;
-      background: var(--accent-primary);
-      color: #fff;
+      padding: 10px 20px;
+      background: var(--accent-cyan);
+      color: #0b1120;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
+      font-size: 0.9rem;
     }
-    .btn-submit:hover {
-      background: #2563eb;
-    }
+    .btn-submit:hover { background: #7dd3fc; }
     .badge-role {
-      padding: 3px 8px;
-      border-radius: 10px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
       text-transform: uppercase;
-      background: var(--accent-primary);
-      color: #fff;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-cyan);
     }
   </style>
 </head>
 <body>
 
   <div class="dashboard-container">
-    
-    <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-dot"></div>
@@ -171,7 +208,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </nav>
     </aside>
 
-    <!-- Main Workspace -->
     <main class="main-content">
       <div class="top-bar">
         <div>
@@ -181,15 +217,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <span class="badge-role"><?= strtoupper(htmlspecialchars($user['role'])); ?></span>
       </div>
 
-      <?php if ($message): ?><p style="color: var(--status-active); margin-bottom: 15px;"><?= htmlspecialchars($message); ?></p><?php endif; ?>
-      <?php if ($error): ?><p style="color: var(--status-danger); margin-bottom: 15px;"><?= htmlspecialchars($error); ?></p><?php endif; ?>
+      <?php if ($message): ?><p style="color: #34d399; margin-bottom: 15px;"><?= htmlspecialchars($message); ?></p><?php endif; ?>
+      <?php if ($error): ?><p style="color: #f87171; margin-bottom: 15px;"><?= htmlspecialchars($error); ?></p><?php endif; ?>
 
       <div class="profile-grid">
-        
-        <!-- Personal Info Form -->
         <div class="card">
           <h3>Account Information</h3>
-          <form method="POST" style="margin-top: 15px;">
+          <form method="POST">
             <input type="hidden" name="action" value="update_profile">
             
             <div class="form-group">
@@ -204,17 +238,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="form-group">
               <label>Account Created</label>
-              <input type="text" value="<?= date('F d, Y', strtotime($user['created_at'])); ?>" disabled style="opacity: 0.6;">
+              <input type="text" value="<?= date('F d, Y', strtotime($user['created_at'])); ?>" disabled style="opacity: 0.5;">
             </div>
 
             <button type="submit" class="btn-submit">Save Changes</button>
           </form>
         </div>
 
-        <!-- Security / Password Change Form -->
         <div class="card">
           <h3>Security & Password</h3>
-          <form method="POST" style="margin-top: 15px;">
+          <form method="POST">
             <input type="hidden" name="action" value="change_password">
 
             <div class="form-group">
@@ -235,10 +268,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="btn-submit">Update Password</button>
           </form>
         </div>
-
       </div>
     </main>
-
   </div>
 
 </body>

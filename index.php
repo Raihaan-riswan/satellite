@@ -2,22 +2,19 @@
 // index.php
 session_start();
 
-// Temporary demo session for testing (Remove once login page is built)
 if (!isset($_SESSION['user_id'])) {
     $_SESSION['user_id'] = 1;
     $_SESSION['user_name'] = 'Kasun Perera';
-    $_SESSION['role'] = 'admin'; // 'admin' or 'user'
+    $_SESSION['role'] = 'admin';
 }
 
 require_once 'config/db.php';
 
-// 1. Fetch KPI Metrics from MySQL
 $total_satellites = $pdo->query("SELECT COUNT(*) FROM satellites WHERE status = 'Active'")->fetchColumn() ?: 0;
 $total_users      = $pdo->query("SELECT COUNT(*) FROM users WHERE status = 'active'")->fetchColumn() ?: 0;
-$pending_passes   = 7; // Placeholder until N2YO API integration
+$pending_passes   = 7;
 $monthly_edits    = $pdo->query("SELECT COUNT(*) FROM audit_logs WHERE MONTH(timestamp) = MONTH(CURRENT_DATE())")->fetchColumn() ?: 0;
 
-// 2. Fetch Category Breakdown for Chart
 $cat_stmt = $pdo->query("SELECT category, COUNT(*) as count FROM satellites GROUP BY category");
 $category_data = $cat_stmt->fetchAll();
 
@@ -28,7 +25,6 @@ foreach ($category_data as $row) {
     $chart_counts[] = $row['count'];
 }
 
-// 3. Fetch Recent Edits Feed (Last 5)
 $recent_edits_stmt = $pdo->query("
     SELECT a.action, a.timestamp, u.name AS user_name, COALESCE(s.name, 'System') AS sat_name 
     FROM audit_logs a
@@ -47,12 +43,96 @@ $recent_edits = $recent_edits_stmt->fetchAll();
   <title>OrbitTrack - Mission Control</title>
   <link rel="stylesheet" href="asset/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-space: #070a12;
+      --card-navy: #0e1726;
+      --border-blue: #1e293b;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-cyan: #38bdf8;
+    }
+    body {
+      background-color: var(--bg-space);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+    }
+    .dashboard-container { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px;
+      background: #0b1120;
+      border-right: 1px solid var(--border-blue);
+      padding: 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; }
+    .brand-dot { width: 12px; height: 12px; background: var(--accent-cyan); border-radius: 50%; box-shadow: 0 0 10px var(--accent-cyan); }
+    .brand h2 { font-size: 1.1rem; letter-spacing: 1.5px; margin: 0; color: #fff; }
+    .sidebar nav a {
+      display: block;
+      padding: 12px 16px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .sidebar nav a:hover, .sidebar nav a.active {
+      background: var(--border-blue);
+      color: var(--accent-cyan);
+    }
+    .main-content { flex: 1; padding: 32px; overflow-y: auto; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .top-bar h1 { font-size: 1.6rem; margin: 0 0 6px 0; font-weight: 600; }
+    .top-bar p { color: var(--text-muted); margin: 0; font-size: 0.88rem; }
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--card-navy);
+      border: 1px solid var(--border-blue);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    .badge-role {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-cyan);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 24px; }
+    .kpi-card {
+      background: var(--card-navy);
+      border: 1px solid var(--border-blue);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .kpi-card h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+    .kpi-card .number { font-size: 2rem; font-weight: 700; color: var(--accent-cyan); margin-top: 8px; }
+    .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    .card { background: var(--card-navy); border: 1px solid var(--border-blue); border-radius: 12px; padding: 20px; }
+    .card h3 { margin: 0 0 15px 0; font-size: 1.05rem; font-weight: 600; }
+    .activity-list { list-style: none; padding: 0; margin: 0; }
+    .activity-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-blue);
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-info strong { display: block; font-size: 0.9rem; }
+    .activity-info span { font-size: 0.8rem; color: var(--text-muted); }
+    .activity-time { font-size: 0.78rem; color: var(--text-muted); }
+  </style>
 </head>
 <body>
 
   <div class="dashboard-container">
-    
-    <!-- Navigation Sidebar -->
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-dot"></div>
@@ -72,10 +152,7 @@ $recent_edits = $recent_edits_stmt->fetchAll();
       </nav>
     </aside>
 
-    <!-- Main Workspace -->
     <main class="main-content">
-      
-      <!-- Top Header Bar -->
       <div class="top-bar">
         <div>
           <h1>Mission Control</h1>
@@ -87,30 +164,26 @@ $recent_edits = $recent_edits_stmt->fetchAll();
         </div>
       </div>
 
-      <!-- KPI Summary Cards -->
       <div class="kpi-grid">
-        <div class="card kpi-card">
+        <div class="kpi-card">
           <h3>Active Satellites</h3>
           <div class="number"><?= $total_satellites; ?></div>
         </div>
-        <div class="card kpi-card">
+        <div class="kpi-card">
           <h3>Total Users</h3>
           <div class="number"><?= $total_users; ?></div>
         </div>
-        <div class="card kpi-card">
+        <div class="kpi-card">
           <h3>Pending Passes</h3>
           <div class="number"><?= $pending_passes; ?></div>
         </div>
-        <div class="card kpi-card">
+        <div class="kpi-card">
           <h3>Monthly Edits</h3>
           <div class="number"><?= $monthly_edits; ?></div>
         </div>
       </div>
 
-      <!-- Main Section: Chart & Recent Edits Feed -->
       <div class="dashboard-grid">
-        
-        <!-- Category Chart Card -->
         <div class="card">
           <h3>Satellites Tracked by Category</h3>
           <div style="position: relative; height:260px; margin-top:15px;">
@@ -118,8 +191,7 @@ $recent_edits = $recent_edits_stmt->fetchAll();
           </div>
         </div>
 
-        <!-- Recent Edits Feed -->
-        <div class="card activity-card">
+        <div class="card">
           <h3>Recent Edits</h3>
           <ul class="activity-list">
             <?php if (empty($recent_edits)): ?>
@@ -137,15 +209,11 @@ $recent_edits = $recent_edits_stmt->fetchAll();
             <?php endif; ?>
           </ul>
         </div>
-
       </div>
-
     </main>
-
   </div>
 
   <script>
-    // Inject Dynamic MySQL Data into Chart.js
     const chartLabels = <?= json_encode($chart_labels); ?>;
     const chartData = <?= json_encode($chart_counts); ?>;
 
@@ -157,10 +225,10 @@ $recent_edits = $recent_edits_stmt->fetchAll();
         datasets: [{
           label: 'Satellites',
           data: chartData.length ? chartData : [1, 5, 12, 4, 2],
-          backgroundColor: '#3b82f6',
-          borderColor: '#22d3ee',
+          backgroundColor: '#38bdf8',
+          borderColor: '#0284c7',
           borderWidth: 1,
-          borderRadius: 4
+          borderRadius: 6
         }]
       },
       options: {
@@ -168,8 +236,8 @@ $recent_edits = $recent_edits_stmt->fetchAll();
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { ticks: { color: '#7c8cae' }, grid: { color: '#233355' } },
-          y: { ticks: { color: '#7c8cae' }, grid: { color: '#233355' } }
+          x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } }
         }
       }
     });
