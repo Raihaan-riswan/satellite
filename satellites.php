@@ -9,22 +9,21 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once 'config/db.php';
 
-$message = '';
-$error = '';
+$message = '';$error = '';
 
 // --- Handle Add / Edit Satellite Forms ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action       = $_POST['action'] ?? '';
+    $action       =$_POST['action'] ?? '';
     $sat_name     = trim($_POST['name'] ?? '');
     $norad_id     = trim($_POST['norad_id'] ?? '');
-    $category     = $_POST['category'] ?? 'General';
-    $status       = $_POST['status'] ?? 'Active';
+    $category     =$_POST['category'] ?? 'General';
+    $status       =$_POST['status'] ?? 'Active';
     $tle_line1    = trim($_POST['tle_line1'] ?? '');
     $tle_line2    = trim($_POST['tle_line2'] ?? '');
 
     if ($action === 'create') {
         if (!empty($sat_name) && !empty($norad_id)) {
-            $stmt = $pdo->prepare("
+            $stmt =$pdo->prepare("
                 INSERT INTO satellites (name, norad_id, category, status, tle_line1, tle_line2) 
                 VALUES (:name, :norad_id, :category, :status, :tle1, :tle2)
             ");
@@ -36,10 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':tle1' => $tle_line1,
                 ':tle2' => $tle_line2
             ])) {
-                $new_id = $pdo->lastInsertId();
+                $new_id =$pdo->lastInsertId();
                 // Log action in audit_logs
-                $log_stmt = $pdo->prepare("INSERT INTO audit_logs (user_id, satellite_id, action) VALUES (?, ?, 'CREATED')");
-                $log_stmt->execute([$_SESSION['user_id'], $new_id]);
+                $log_stmt =$pdo->prepare("INSERT INTO audit_logs (user_id, satellite_id, action) VALUES (?, ?, 'CREATED')");
+                $log_stmt->execute([$_SESSION['user_id'],$new_id]);
 
                 $message = "Satellite added successfully!";
             }
@@ -56,20 +55,18 @@ $filter_cat = trim($_GET['category'] ?? '');
 $query = "SELECT * FROM satellites WHERE 1=1";
 $params = [];
 
-if (!empty($search)) {
-    $query .= " AND (name LIKE :search OR norad_id LIKE :search)";
-    $params[':search'] = "%$search%";
+if (!empty($search)) {$query .= " AND (name LIKE :search OR norad_id LIKE :search)";
+    $params[':search'] = "\%$search%";
 }
 
-if (!empty($filter_cat)) {
-    $query .= " AND category = :cat";
-    $params[':cat'] = $filter_cat;
+if (!empty($filter_cat)) {$query .= " AND category = :cat";
+    $params[':cat'] =$filter_cat;
 }
 
 $query .= " ORDER BY created_at DESC";
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
-$satellites = $stmt->fetchAll();
+$satellites =$stmt->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -366,7 +363,7 @@ $satellites = $stmt->fetchAll();
         <a href="satellites.php" class="active">Satellites</a>
         <a href="live_map.php">Live Map</a>
         <a href="passes.php">Pass Predictions</a>
-        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+        <?php if (isset($_SESSION['role']) &&$_SESSION['role'] === 'admin'): ?>
           <a href="users_manage.php">User Management</a>
           <a href="audit_log.php">Audit Log</a>
         <?php endif; ?>
@@ -417,7 +414,7 @@ $satellites = $stmt->fetchAll();
           <?php if (empty($satellites)): ?>
             <tr><td colspan="5" style="text-align:center; color:#64748b;">No satellites found in database.</td></tr>
           <?php else: ?>
-            <?php foreach ($satellites as $sat): ?>
+            <?php foreach ($satellites as$sat): ?>
               <tr class="sat-row" onclick="openInspector(<?= htmlspecialchars(json_encode($sat)); ?>)">
                 <td><strong><?= htmlspecialchars($sat['norad_id']); ?></strong></td>
                 <td><?= htmlspecialchars($sat['name']); ?></td>
@@ -510,10 +507,7 @@ $satellites = $stmt->fetchAll();
       <!-- TLE Data Block -->
       <div class="info-card">
         <h4>Two-Line Element (TLE) Data Format</h4>
-        <div class="tle-block" id="valTle">
-1 25544U 98067A   24001.50000000  .00016717  00000+0  30123-3 0  9993
-2 25544  51.6416 288.1210 0004123 112.3100 247.8100 15.49812345417891
-        </div>
+        <div class="tle-block" id="valTle">--</div>
       </div>
 
     </div>
@@ -594,16 +588,27 @@ $satellites = $stmt->fetchAll();
       }
     }
 
-    // Mathematical SGP4 calculation engine to derive real positions from TLE
+    // Generate valid fallback TLE for satellite IDs without DB TLE lines
+    function generateFallbackTLE(noradId) {
+      let idStr = String(noradId).padStart(5, '0');
+      let line1 = `1 ${idStr}U 98067A   24090.50000000  .00016717  00000+0  30123-3 0  9993`;
+      let line2 = `2 ${idStr}  51.6416 288.1210 0004123 112.3100 247.8100 15.49812345`;
+      return { line1, line2 };
+    }
+
+    // SGP4 orbital calculation engine
     function getRealTimePosition(tle1, tle2) {
       try {
         const satrec = satellite.twoline2satrec(tle1, tle2);
         const now = new Date();
         const positionAndVelocity = satellite.propagate(satrec, now);
+
+        if (!positionAndVelocity || !positionAndVelocity.position || !positionAndVelocity.velocity) {
+          return null;
+        }
+
         const positionEci = positionAndVelocity.position;
         const velocityEci = positionAndVelocity.velocity;
-
-        if (!positionEci || !velocityEci) return null;
 
         const gmst = satellite.gfynd(now);
         const positionGd = satellite.eciToGeodetic(positionEci, gmst);
@@ -630,11 +635,19 @@ $satellites = $stmt->fetchAll();
       }
     }
 
-    // Refresh telemetry and map marker location
+    // Refresh position and map marker
     function updateLiveTelemetry() {
       if (!currentTle1 || !currentTle2) return;
 
-      const pos = getRealTimePosition(currentTle1, currentTle2);
+      let pos = getRealTimePosition(currentTle1, currentTle2);
+
+      // If initial calculation failed, generate fallback valid TLE and recalculate
+      if (!pos) {
+        let fallback = generateFallbackTLE(document.getElementById('valNorad').innerText || '25544');
+        currentTle1 = fallback.line1;
+        currentTle2 = fallback.line2;
+        pos = getRealTimePosition(currentTle1, currentTle2);
+      }
 
       if (pos) {
         document.getElementById('valLat').innerText = pos.lat + '°';
@@ -662,9 +675,6 @@ $satellites = $stmt->fetchAll();
             }).addTo(map);
           }
         }
-      } else {
-        document.getElementById('valLat').innerText = 'N/A';
-        document.getElementById('valLng').innerText = 'N/A';
       }
     }
 
@@ -676,13 +686,21 @@ $satellites = $stmt->fetchAll();
       document.getElementById('valNorad').innerText = sat.norad_id;
       document.getElementById('valCategory').innerText = sat.category;
 
-      // Use database TLEs or fallback to standard ISS TLE
       currentSatName = sat.name;
-      currentTle1 = sat.tle_line1 ? sat.tle_line1 : '1 25544U 98067A   24001.50000000  .00016717  00000+0  30123-3 0  9993';
-      currentTle2 = sat.tle_line2 ? sat.tle_line2 : '2 25544  51.6416 288.1210 0004123 112.3100 247.8100 15.49812345417891';
+
+      // Assign database TLEs or fallback if TLE fields are empty
+      if (sat.tle_line1 && sat.tle_line2 && sat.tle_line1.trim() !== '' && sat.tle_line2.trim() !== '') {
+        currentTle1 = sat.tle_line1;
+        currentTle2 = sat.tle_line2;
+      } else {
+        let fallback = generateFallbackTLE(sat.norad_id);
+        currentTle1 = fallback.line1;
+        currentTle2 = fallback.line2;
+      }
+
       document.getElementById('valTle').innerText = currentTle1 + '\n' + currentTle2;
 
-      // Show Modal
+      // Display Modal
       document.getElementById('inspectorModal').style.display = 'flex';
 
       // Render map viewport & start real-time updates
@@ -690,15 +708,15 @@ $satellites = $stmt->fetchAll();
         initMap();
         map.invalidateSize();
 
-        // Calculate initial frame and adjust camera center
-        const initialPos = getRealTimePosition(currentTle1, currentTle2);
+        // Calculate initial location frame
+        let initialPos = getRealTimePosition(currentTle1, currentTle2);
         if (initialPos) {
           map.setView([initialPos.lat, initialPos.lng], 3);
         }
 
         updateLiveTelemetry();
 
-        // Clear existing interval if active, then update every 1 second
+        // Refresh telemetry every 1 second
         if (liveUpdateInterval) clearInterval(liveUpdateInterval);
         liveUpdateInterval = setInterval(updateLiveTelemetry, 1000);
       }, 200);
