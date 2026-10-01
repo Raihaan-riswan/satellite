@@ -29,6 +29,38 @@ $logs = $stmt->fetchAll();
   <meta charset="UTF-8">
   <title>OrbitTrack - Audit Logs</title>
   <link rel="stylesheet" href="asset/css/style.css">
+  <style>
+    .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card-navy);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-blue);
+      margin-top: 20px;
+    }
+    .log-table th, .log-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-blue);
+    }
+    .log-table th {
+      background: rgba(35, 51, 85, 0.5);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+    }
+    .badge-action {
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .action-created { background: rgba(52, 211, 153, 0.2); color: var(--status-active); }
+    .action-updated { background: rgba(59, 130, 246, 0.2); color: var(--accent-primary); }
+    .action-deleted { background: rgba(248, 113, 113, 0.2); color: var(--status-danger); }
+  </style>
 </head>
 <body>
 
@@ -62,7 +94,7 @@ $logs = $stmt->fetchAll();
       </div>
 
       <!-- Audit Logs Table -->
-      <table class="data-table log-table">
+      <table class="log-table">
         <thead>
           <tr>
             <th>Log ID</th>
@@ -75,7 +107,7 @@ $logs = $stmt->fetchAll();
         <tbody>
           <?php if (empty($logs)): ?>
             <tr>
-              <td colspan="5" class="text-center text-muted">No activity recorded yet.</td>
+              <td colspan="5" style="color: var(--text-muted); text-align: center;">No activity recorded yet.</td>
             </tr>
           <?php else: ?>
             <?php foreach ($logs as $log): ?>
@@ -87,11 +119,11 @@ $logs = $stmt->fetchAll();
                 <td>
                   <?php 
                     $act = strtoupper($log['action']);
-                    $class = 'badge-primary';
-                    if (str_contains($act, 'CREATE')) $class = 'badge-success';
-                    if (str_contains($act, 'DELETE')) $class = 'badge-danger';
+                    $class = 'action-updated';
+                    if (str_contains($act, 'CREATE')) $class = 'action-created';
+                    if (str_contains($act, 'DELETE')) $class = 'action-deleted';
                   ?>
-                  <span class="badge <?= $class; ?>">
+                  <span class="badge-action <?= $class; ?>">
                     <?= htmlspecialchars($log['action']); ?>
                   </span>
                 </td>
