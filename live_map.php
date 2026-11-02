@@ -72,7 +72,7 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
       min-height: 500px;
       border-radius: 12px;
       border: 1px solid var(--border-blue);
-      background: #050b14;
+      background: #1c56ac;
     }
     .leaflet-popup-content-wrapper {
       background: var(--card-navy);
