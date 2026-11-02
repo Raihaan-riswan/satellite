@@ -80,6 +80,7 @@ $satellites = $stmt->fetchAll();
   
   <!-- Leaflet CSS for Interactive 2D Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="asset/css/style.css">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -98,11 +99,9 @@ $satellites = $stmt->fetchAll();
     /* Sidebar Navigation */
     .sidebar {
       width: 240px;
-      background: #0b1329;
-      border-right: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 25px 20px;
-      display: flex;
-      flex-direction: column;
+      background: #0b1120;
+      border-right: 1px solid var(--border-blue);
+      padding: 24px;
     }
     .brand {
       display: flex;
@@ -124,12 +123,12 @@ $satellites = $stmt->fetchAll();
     }
     .sidebar nav a {
       display: block;
-      padding: 12px 14px;
-      color: #64748b;
+      padding: 12px 16px;
+      color: var(--text-muted);
       text-decoration: none;
       border-radius: 8px;
-      font-size: 0.9rem;
       margin-bottom: 6px;
+      font-size: 0.9rem;
       transition: all 0.2s;
     }
     .sidebar nav a:hover, .sidebar nav a.active {
