@@ -53,7 +53,7 @@ $users = $stmt->fetchAll();
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OrbitTrack - User Management</title>
+  <title>Thuraya (الثريا) - User Management</title>
   <link rel="stylesheet" href="asset/css/style.css">
   <style>
     :root {
@@ -186,7 +186,7 @@ $users = $stmt->fetchAll();
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-dot"></div>
-        <h2>ORBITTRACK</h2>
+        <h2>Thuraya (الثريا)</h2>
       </div>
       <nav>
         <a href="index.php">Dashboard</a>

@@ -40,7 +40,7 @@ $recent_edits = $recent_edits_stmt->fetchAll();
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OrbitTrack - Mission Control</title>
+  <title>Thuraya (الثريا) - Mission Control</title>
   <link rel="stylesheet" href="asset/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -136,7 +136,7 @@ $recent_edits = $recent_edits_stmt->fetchAll();
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-dot"></div>
-        <h2>ORBITTRACK</h2>
+        <h2>Thuraya (الثريا)</h2>
       </div>
       <nav>
         <a href="index.php" class="active">Dashboard</a>

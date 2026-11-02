@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OrbitTrack - Join Us</title>
+  <title>Thuraya (الثريا) - Join Us</title>
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
     * {
@@ -398,7 +398,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <circle cx="12" cy="12" r="3"></circle>
       <path d="M3 12c0 3.5 4 7 9 7s9-3.5 9-7-4-7-9-7-9 3.5-9 7z"></path>
     </svg>
-    <span>OrbitTrack</span>
+    <span>Thuraya (الثريا)</span>
   </div>
 
   <div class="page-container">

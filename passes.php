@@ -70,7 +70,7 @@ if (!empty($sat_id)) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OrbitTrack - Pass Predictions</title>
+  <title>Thuraya (الثريا) - Pass Predictions</title>
   <link rel="stylesheet" href="asset/css/style.css">
   <style>
     :root {
@@ -187,7 +187,7 @@ if (!empty($sat_id)) {
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-dot"></div>
-        <h2>ORBITTRACK</h2>
+        <h2>Thuraya (الثريا)</h2>
       </div>
       <nav>
         <a href="index.php">Dashboard</a>

@@ -76,7 +76,7 @@ $satellites = $stmt->fetchAll();
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OrbitTrack - Satellites Catalog</title>
+  <title>Thuraya (الثريا) - Satellites Catalog</title>
   
   <!-- Leaflet CSS for Interactive 2D Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -357,7 +357,7 @@ $satellites = $stmt->fetchAll();
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-dot"></div>
-        <h2>ORBITTRACK</h2>
+        <h2>Thuraya (الثريا)</h2>
       </div>
       <nav>
         <a href="index.php">Dashboard</a>

@@ -18,7 +18,7 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OrbitTrack - Live Map</title>
+  <title>Thuraya (الثريا) - Live Map</title>
   <link rel="stylesheet" href="asset/css/style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -100,7 +100,7 @@ $satellites =$stmt->fetchAll(PDO::FETCH_ASSOC);
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-dot"></div>
-        <h2>ORBITTRACK</h2>
+        <h2>Thuraya (الثريا)</h2>
       </div>
       <nav>
         <a href="index.php">Dashboard</a>

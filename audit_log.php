@@ -28,7 +28,7 @@ $logs = $stmt->fetchAll();
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OrbitTrack - Audit Logs</title>
+  <title>Thuraya (الثريا) - Audit Logs</title>
   <link rel="stylesheet" href="asset/css/style.css">
   <style>
     :root {
@@ -132,7 +132,7 @@ $logs = $stmt->fetchAll();
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-dot"></div>
-        <h2>ORBITTRACK</h2>
+        <h2>Thuraya (الثريا)</h2>
       </div>
       <nav>
         <a href="index.php">Dashboard</a>
